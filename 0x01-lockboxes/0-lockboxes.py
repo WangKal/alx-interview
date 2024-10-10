@@ -1,22 +1,21 @@
 #!/usr/bin/python3
-"""Defines a fuNction that determines if a box containing a list
+"""Defines a function that determines if a box containing a list
    of lists can be opened using keys stored in the lists
 """
+
+
 def canUnlockAll(boxes):
     """Determines if boxes can be unlocked"""
-    n = len(boxes)
-    unlocked = set([0])  # Start with box 0 unlocked.
-    keys = [0]  # Start with the key to box 0.
+    position = 0
+    unlocked = {}
 
-    while keys:
-        current_key = keys.pop()
-        
-        # Iterate over the keys in the current box.
-        for key in boxes[current_key]:
-            # If the key corresponds to a box that hasn't been unlocked yet:
-            if key not in unlocked and key < n:
-                unlocked.add(key)  # Unlock the box.
-                keys.append(key)  # Add its keys to the list to explore.
-    
-    # If the number of unlocked boxes equals the total number of boxes, return True.
-    return len(unlocked) == n
+    for box in boxes:
+        if len(box) == 0 or position == 0:
+            unlocked[position] = "always_unlocked"
+        for key in box:
+            if key < len(boxes) and key != position:
+                unlocked[key] = key
+        if len(unlocked) == len(boxes):
+            return True
+        position += 1
+    return False
