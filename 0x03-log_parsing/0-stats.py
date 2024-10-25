@@ -1,55 +1,54 @@
-#!/usr/bin/python3
-"""
-A script: Reads standard input line by line and computes metrics
-"""
+import sys
+import signal
 
+# Initialize variables
+total_file_size = 0
+status_counts = {200: 0, 301: 0, 400: 0, 401: 0, 403: 0, 404: 0, 405: 0, 500: 0}
+line_count = 0
 
-def parseLogs():
-    """
-    Reads logs from standard input and generates reports
-    Reports:
-        * Prints log size after reading every 10 lines & at KeyboardInterrupt
-    Raises:
-        KeyboardInterrupt (Exception): handles this exception and raises it
-    """
-    stdin = __import__('sys').stdin
-    lineNumber = 0
-    fileSize = 0
-    statusCodes = {}
-    codes = ('200', '301', '400', '401', '403', '404', '405', '500')
+def print_statistics():
+    """Function to print statistics."""
+    print(f"Total file size: {total_file_size}")
+    for status_code in sorted(status_counts):
+        if status_counts[status_code] > 0:
+            print(f"{status_code}: {status_counts[status_code]}")
+
+def handle_interrupt(signal, frame):
+    """Handle keyboard interrupt (CTRL + C) to print statistics."""
+    print_statistics()
+    sys.exit(0)
+
+# Set up the signal handler for CTRL + C
+signal.signal(signal.SIGINT, handle_interrupt)
+
+# Read lines from stdin
+for line in sys.stdin:
     try:
-        for line in stdin:
-            lineNumber += 1
-            line = line.split()
-            try:
-                fileSize += int(line[-1])
-                if line[-2] in codes:
-                    try:
-                        statusCodes[line[-2]] += 1
-                    except KeyError:
-                        statusCodes[line[-2]] = 1
-            except (IndexError, ValueError):
-                pass
-            if lineNumber == 10:
-                report(fileSize, statusCodes)
-                lineNumber = 0
-        report(fileSize, statusCodes)
-    except KeyboardInterrupt as e:
-        report(fileSize, statusCodes)
-        raise
+        parts = line.split()
+        # Ensure the line is in the correct format by checking parts
+        if len(parts) < 9 or parts[3][0] != "[" or parts[5] != "\"GET":
+            continue
+        
+        # Extract the status code and file size
+        status_code = int(parts[-2])
+        file_size = int(parts[-1])
+        
+        # Update total file size
+        total_file_size += file_size
+        
+        # Update status code count if it's one of the specified ones
+        if status_code in status_counts:
+            status_counts[status_code] += 1
+        
+        line_count += 1
+        
+        # Print statistics after every 10 lines
+        if line_count % 10 == 0:
+            print_statistics()
 
+    except (ValueError, IndexError):
+        # Skip lines with incorrect format
+        continue
 
-def report(fileSize, statusCodes):
-    """
-    Prints generated report to standard output
-    Args:
-        fileSize (int): total log size after every 10 successfully read line
-        statusCodes (dict): dictionary of status codes and counts
-    """
-    print("File size: {}".format(fileSize))
-    for key, value in sorted(statusCodes.items()):
-        print("{}: {}".format(key, value))
-
-
-if __name__ == '__main__':
-    parseLogs()
+# Print final statistics if input ends
+print_statistics()
